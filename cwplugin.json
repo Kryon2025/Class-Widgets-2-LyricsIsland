@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "api_version": "~=0.4.2",
   "entry": "main.py",
-  "author": "松峰",
+  "author": "松峰 (基于 jiangyin14、星标、沫烬染、Laoshui、Xwei1645 的 LyricsIsland 移植)",
   "description": "歌词岛：本地 HTTP 服务接收音乐软件实时歌词，主歌词与附加歌词居中显示。",
   "readme": "README.md",
   "icon": "icon.png"
