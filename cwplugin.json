@@ -1,7 +1,7 @@
 {
  "id": "com.lyricsisland",
  "name": "歌词(Lyricsisland)",
- "version": "1.0.0",
+ "version": "v1.0.0",
  "api_version": "~=0.6.0",
  "entry": "main.py",
  "author": "松峰 (基于 jiangyin14、星标、沫烬染、Laoshui、Xwei1645 的 LyricsIsland 移植)",
