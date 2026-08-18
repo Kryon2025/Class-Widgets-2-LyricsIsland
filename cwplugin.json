@@ -1,6 +1,6 @@
 {
  "id": "com.lyricsisland",
- "name": "歌词",
+ "name": "歌词(Lyricsisland)",
  "version": "1.0.0",
  "api_version": "~=0.6.0",
  "entry": "main.py",
