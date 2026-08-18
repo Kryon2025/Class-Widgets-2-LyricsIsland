@@ -62,3 +62,7 @@ Content-Type: application/json
 - 感谢原版 [LyricsIslandCW](https://github.com/jiangyin14/LyricsIslandCW) 为 Class Widgets 1 提供歌词支持
 
 本移植版基于 MIT 协议发布，完整版权声明见 [LICENSE](./LICENSE) 文件。
+## SDK 版本
+
+本插件已升级适配 Class Widgets 2 SDK **0.6.0**（`cwplugin.json` 中 `api_version: ~=0.6.0`），
+使用官方 `ClassWidgets.SDK` 接口（`CW2Plugin` / `PluginAPI`：`api.widgets` / `api.ui` / `api.notification` / `api.schedule` / `api.config` / `api.runtime` 等）。

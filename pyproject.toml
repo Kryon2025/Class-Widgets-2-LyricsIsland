@@ -7,7 +7,7 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["class-widgets-sdk>=0.4.2"]
+dependencies = ["class-widgets-sdk>=0.6.0"]
 
 [build-system]
 requires = ["setuptools"]
