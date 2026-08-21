@@ -77,13 +77,10 @@ class LyricsHandler(BaseHTTPRequestHandler):
 class HTTPServerWithStop(HTTPServer):
     """可停止的 HTTP 服务器"""
 
-    def serve_forever(self):
-        self.running = True
-        while self.running:
-            self.handle_request()
-
     def stop(self):
-        self.running = False
+        # shutdown() 中断 serve_forever() 的阻塞等待；server_close() 释放监听端口
+        self.shutdown()
+        self.server_close()
 
 
 class Plugin(CW2Plugin):
@@ -150,25 +147,31 @@ class Plugin(CW2Plugin):
 
     # ---- HTTP 服务 ----
     def _start_server(self):
-        def server_worker():
-            try:
-                self.server = HTTPServerWithStop((SERVER_HOST, SERVER_PORT), LyricsHandler)
-                logger.info(f"Lyrics server started at http://{SERVER_HOST}:{SERVER_PORT}")
-                self.server.serve_forever()
-            except OSError as e:
-                # 端口被占用（如旧实例未释放）：不阻塞插件
-                logger.error(f"Lyrics server failed to bind {SERVER_HOST}:{SERVER_PORT}: {e}")
-            except Exception as e:
-                logger.error(f"Lyrics server error: {e}")
-
-        self._server_thread = threading.Thread(target=server_worker, daemon=True)
+        try:
+            # 主线程创建（构造时完成 bind，失败立即可知），线程只运行事件循环
+            self.server = HTTPServerWithStop((SERVER_HOST, SERVER_PORT), LyricsHandler)
+        except OSError as e:
+            # 端口被占用（如旧实例未释放）：不阻塞插件
+            logger.error(f"Lyrics server failed to bind {SERVER_HOST}:{SERVER_PORT}: {e}")
+            self.server = None
+            return
+        except Exception as e:
+            logger.error(f"Lyrics server error: {e}")
+            self.server = None
+            return
+        logger.info(f"Lyrics server started at http://{SERVER_HOST}:{SERVER_PORT}")
+        self._server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self._server_thread.start()
 
     def _stop_server(self):
-        if self.server:
+        server = self.server
+        self.server = None
+        if server:
             try:
-                self.server.stop()
+                server.stop()
                 logger.info("Lyrics server stopped")
             except Exception as e:
                 logger.error(f"Failed to stop lyrics server: {e}")
-        self.server = None
+        if self._server_thread and self._server_thread.is_alive():
+            self._server_thread.join(2)
+        self._server_thread = None

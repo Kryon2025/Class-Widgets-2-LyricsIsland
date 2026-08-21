@@ -1,10 +1,10 @@
 {
  "id": "com.lyricsisland",
  "name": "歌词(Lyricsisland)",
- "version": "v1.0.0",
+ "version": "1.0.0",
  "api_version": "~=0.6.0",
  "entry": "main.py",
- "author": "松峰 (基于 jiangyin14、星标、沫烬染、Laoshui、Xwei1645 的 LyricsIsland 移植)",
+ "author": "松峰 (基于 jiangyin14、星标、沫烬染、Laoshui、Xwei1645 的 LyricsIsland 并由Deepseek V4 Flash移植)",
  "description": "歌词岛：本地 HTTP 服务接收音乐软件实时歌词，主歌词与附加歌词居中显示。",
  "url":"https://github.com/Kryon2025/Class-Widgets-2-LyricsIsland.git",
  "readme": "README.md",
