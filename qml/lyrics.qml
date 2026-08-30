@@ -7,10 +7,18 @@ import ClassWidgets.Theme
 
 Widget {
     id: root
-    text: qsTr("歌词")
+    // 不显示组件名称（基类顶部标题行），让歌词内容整体居中显示
+    text: ""
 
     // 固定组件宽度，与其他组件保持一致（不随设置改变）
     implicitWidth: 300
+
+    // 固定高度下的动态内部布局：
+    // 窗口高度随字号（保证文字完整），正文-译文间距按内容区剩余空间动态分配
+    property real lyricWinH: root.lyricSize + 4       // 主歌词窗口：文字高约1.25x + 边距
+    property real extraWinH: root.extraSize + 3       // 译文窗口
+    property real contentH: root.miniMode ? 34 : 38   // 内容区固定高度
+    property real gapDyn: Math.max(1, Math.min(4, root.contentH - root.lyricWinH - root.extraWinH))
 
     // ---- 设置 ----
     property int lyricSize: root.settings && root.settings.lyric_font_size !== undefined
@@ -115,13 +123,17 @@ Widget {
 
     // 歌词层：固定尺寸容器（不随内容变化，避免撑大组件）
     // 组件总高由应用固定（normal 100 / mini 56），内容区约 38/34px
+    // 标题行已隐藏（text 为空），normal 模式仍有约 20px 空白顶栏占位，
+    // 用负偏移把内容区上移补偿，使歌词在组件内视觉居中。
+    // clip 关闭：字号很大时文字完整溢出显示，不被裁切
     Item {
         id: fixedArea
         width: 300
-        height: root.miniMode ? 34 : 38
+        height: root.contentH
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        clip: true
+        anchors.verticalCenterOffset: root.miniMode ? 0 : -13
+        clip: false
 
         Item {
             id: lyricArea
@@ -134,9 +146,8 @@ Widget {
                 id: lyricScrollView
                 x: 24
                 width: 252
-                height: 21
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.verticalCenterOffset: -8
+                y: 0
+                height: root.lyricWinH
                 clip: true
 
                 LyricsLine {
@@ -153,14 +164,13 @@ Widget {
                 }
             }
 
-            // 译文窗口：同样左右各留 24px 边距
+            // 译文窗口：同样左右各留 24px 边距，与正文间距随字号动态调整
             Item {
                 id: extraSlot
-                anchors.top: lyricScrollView.bottom
-                anchors.topMargin: 1
+                y: root.lyricWinH + root.gapDyn
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 252
-                height: 16
+                height: root.extraWinH
                 clip: true
 
                 Quick.Text {
