@@ -1,0 +1,48 @@
+name: Release Plugin
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Class Widgets 2 SDK
+        run: |
+          pip install class-widgets-sdk
+      
+      - name: Build plugin packages
+        run: |
+          cw-plugin-pack
+          cw-plugin-pack --format zip
+      
+      - name: Publish to plugin registry
+        env:
+          CWPT_TOKEN: ${{ secrets.CWPT_TOKEN }}
+        run: |
+          cw-plugin-publish
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            *.cwplugin
+            *.zip
+          generate_release_notes: true
