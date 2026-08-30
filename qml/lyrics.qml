@@ -12,16 +12,6 @@ Widget {
     // 固定组件宽度，与其他组件保持一致（不随设置改变）
     implicitWidth: 300
 
-    // 内容高度自适应：主歌词行 + 2px 间距 + 译文行，完整显示不裁切
-    property real lyricRowH: root.lyricSize + 6
-    property real extraRowH: backend.extraText !== "" ? (root.extraSize + 4) : 0
-    property real contentNeedH: root.lyricRowH + 2 + root.extraRowH
-    // 覆盖基类固定高度（基类 normal 100 / mini 56）：
-    // 预留标题行与边距（normal 约 62px / mini 22px），内容不够时组件自动增高
-    height: root.miniMode
-        ? Math.max(56, 22 + root.contentNeedH)
-        : Math.max(100, 62 + root.contentNeedH)
-
     // ---- 设置 ----
     property int lyricSize: root.settings && root.settings.lyric_font_size !== undefined
                             ? root.settings.lyric_font_size : 16
@@ -123,12 +113,12 @@ Widget {
         font.pixelSize: 13
     }
 
-    // 歌词层：高度随内容自适应（完整容纳主歌词 + 译文，不裁切），
-    // 组件总高由 root.height 动态扩展保证放得下
+    // 歌词层：固定尺寸容器（不随内容变化，避免撑大组件）
+    // 组件总高由应用固定（normal 100 / mini 56），内容区约 38/34px
     Item {
         id: fixedArea
         width: 300
-        height: root.contentNeedH
+        height: root.miniMode ? 34 : 38
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         clip: true
@@ -144,7 +134,9 @@ Widget {
                 id: lyricScrollView
                 x: 24
                 width: 252
-                height: root.lyricRowH
+                height: 21
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: -8
                 clip: true
 
                 LyricsLine {
@@ -161,13 +153,14 @@ Widget {
                 }
             }
 
-            // 译文窗口：同样左右各留 24px 边距，位于主歌词下方 2px
+            // 译文窗口：同样左右各留 24px 边距
             Item {
                 id: extraSlot
-                y: root.lyricRowH + 2
+                anchors.top: lyricScrollView.bottom
+                anchors.topMargin: 1
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 252
-                height: root.extraRowH
+                height: 16
                 clip: true
 
                 Quick.Text {
