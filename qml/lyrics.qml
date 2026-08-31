@@ -123,8 +123,8 @@ Widget {
 
     // 歌词层：固定尺寸容器（不随内容变化，避免撑大组件）
     // 组件总高由应用固定（normal 100 / mini 56），内容区约 38/34px
-    // 标题行已隐藏（text 为空），normal 模式仍有约 20px 空白顶栏占位，
-    // 用负偏移把内容区上移补偿，使歌词在组件内视觉居中。
+    // 新版主程序标题行在 text 为空时不占位（visible:false），
+    // 因此不再需要 -13 上移补偿，直接垂直居中即可。
     // clip 关闭：字号很大时文字完整溢出显示，不被裁切
     Item {
         id: fixedArea
@@ -132,7 +132,7 @@ Widget {
         height: root.contentH
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root.miniMode ? 0 : -13
+        anchors.verticalCenterOffset: 0
         clip: false
 
         Item {
