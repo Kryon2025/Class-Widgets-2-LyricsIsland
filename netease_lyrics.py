@@ -206,7 +206,12 @@ def parse_lrc(lrc_text):
 # 制作信息行（作词/作曲/编曲等）不与翻译合并，避免开头把第一句的翻译贴到制作信息上
 _CREDIT_START = re.compile(
     r"^(?:作词|作曲|编曲|制作人?|监制|录音|混音|母带|词曲|原唱|翻唱|cover|"
-    r"OP|SP|文案|出品|统筹|和声|吉他|贝斯|鼓|键盘|钢琴|弦乐|制作)[\s:：]"
+    r"OP|SP|文案|出品|统筹|和声|吉他|贝斯|鼓|键盘|钢琴|弦乐|制作|发行|企划|宣传|"
+    r"配唱|人声|录音室|录音棚|"
+    r"Vocals?|Producer|Composer|Lyricist|Arranger|Mixed|Mastered|Recording|"
+    r"Guitar|Bass|Drums|Piano|Strings|Backing|Chorus)"
+    r"[^:：]{0,8}[:：]",
+    re.I,
 )
 
 
@@ -270,4 +275,6 @@ def find_lyrics(title, artist, duration_ms):
     lrc, tlrc = fetch_lyrics(best_song["id"])
     lines = parse_lrc(lrc)
     trans = parse_lrc(tlrc) if tlrc else []
-    return best_song, align_translation(lines, trans)
+    result = align_translation(lines, trans)
+    # 过滤制作信息行（作词/作曲/编曲…），它们不应作为歌词显示
+    return best_song, [(t, text, tr) for (t, text, tr) in result if not _CREDIT_START.match(text)]

@@ -1,0 +1,75 @@
+{"t": "09:46:36", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "09:46:36", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "09:46:36", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "09:46:36", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "09:46:36", "ev": "song", "smtc": "七里香", "smtc_artist": "周杰伦"}
+{"t": "09:46:36", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "09:46:36", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "09:46:36", "ev": "song", "smtc": "七里香", "smtc_artist": "周杰伦"}
+{"t": "09:46:36", "ev": "song", "smtc": "晴天 - 周杰伦", "smtc_artist": "周杰伦"}
+{"t": "09:46:36", "ev": "match", "matched": true, "smtc": "晴天 - 周杰伦", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "09:46:36", "ev": "song", "smtc": "晴天", "smtc_artist": "别人翻唱"}
+{"t": "09:59:35", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "09:59:35", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "09:59:35", "ev": "tick", "title": "晴天", "artist": "周杰伦", "pos": 60000, "dur": 269000, "playing": true, "has_progress": true, "matched": true}
+{"t": "09:59:35", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "09:59:35", "ev": "tick", "title": "晴天", "artist": "周杰伦", "pos": 30000, "dur": 269000, "playing": true, "has_progress": true, "matched": false}
+{"t": "09:59:35", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "09:59:35", "ev": "song", "smtc": "七里香", "smtc_artist": "周杰伦"}
+{"t": "09:59:35", "ev": "tick", "title": "七里香", "artist": "周杰伦", "pos": 50000, "dur": 299000, "playing": true, "has_progress": true, "matched": false}
+{"t": "09:59:35", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "09:59:35", "ev": "tick", "title": "晴天", "artist": "周杰伦", "pos": 10000, "dur": 269000, "playing": true, "has_progress": true, "matched": false}
+{"t": "09:59:35", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "09:59:35", "ev": "song", "smtc": "七里香", "smtc_artist": "周杰伦"}
+{"t": "09:59:35", "ev": "song", "smtc": "晴天 - 周杰伦", "smtc_artist": "周杰伦"}
+{"t": "09:59:35", "ev": "tick", "title": "晴天 - 周杰伦", "artist": "周杰伦", "pos": 20000, "dur": 269000, "playing": true, "has_progress": true, "matched": false}
+{"t": "09:59:35", "ev": "match", "matched": true, "smtc": "晴天 - 周杰伦", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "09:59:35", "ev": "song", "smtc": "晴天", "smtc_artist": "别人翻唱"}
+{"t": "09:59:35", "ev": "tick", "title": "晴天", "artist": "别人翻唱", "pos": 20000, "dur": 269000, "playing": true, "has_progress": true, "matched": false}
+{"t": "10:08:51", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "10:08:51", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "10:08:51", "ev": "tick", "title": "晴天", "artist": "周杰伦", "pos": 60000, "dur": 269000, "playing": true, "has_progress": true, "matched": true, "raw": ""}
+{"t": "10:08:51", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "10:08:51", "ev": "tick", "title": "晴天", "artist": "周杰伦", "pos": 30000, "dur": 269000, "playing": true, "has_progress": true, "matched": false, "raw": ""}
+{"t": "10:08:51", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "10:08:51", "ev": "song", "smtc": "七里香", "smtc_artist": "周杰伦"}
+{"t": "10:08:51", "ev": "tick", "title": "七里香", "artist": "周杰伦", "pos": 50000, "dur": 299000, "playing": true, "has_progress": true, "matched": false, "raw": ""}
+{"t": "10:08:51", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "10:08:51", "ev": "tick", "title": "晴天", "artist": "周杰伦", "pos": 10000, "dur": 269000, "playing": true, "has_progress": true, "matched": false, "raw": ""}
+{"t": "10:08:51", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "10:08:51", "ev": "song", "smtc": "七里香", "smtc_artist": "周杰伦"}
+{"t": "10:08:51", "ev": "song", "smtc": "晴天 - 周杰伦", "smtc_artist": "周杰伦"}
+{"t": "10:08:51", "ev": "tick", "title": "晴天 - 周杰伦", "artist": "周杰伦", "pos": 20000, "dur": 269000, "playing": true, "has_progress": true, "matched": false, "raw": ""}
+{"t": "10:08:51", "ev": "match", "matched": true, "smtc": "晴天 - 周杰伦", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "10:08:51", "ev": "song", "smtc": "晴天", "smtc_artist": "别人翻唱"}
+{"t": "10:08:51", "ev": "tick", "title": "晴天", "artist": "别人翻唱", "pos": 20000, "dur": 269000, "playing": true, "has_progress": true, "matched": false, "raw": ""}
+{"t": "10:20:58", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "10:20:58", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "10:20:58", "ev": "tick", "title": "晴天", "artist": "周杰伦", "pos": 60000, "dur": 269000, "playing": true, "has_progress": true, "matched": true, "raw": ""}
+{"t": "10:20:58", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "10:20:58", "ev": "tick", "title": "晴天", "artist": "周杰伦", "pos": 30000, "dur": 269000, "playing": true, "has_progress": true, "matched": false, "raw": ""}
+{"t": "10:20:58", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "10:20:58", "ev": "song", "smtc": "七里香", "smtc_artist": "周杰伦"}
+{"t": "10:20:58", "ev": "tick", "title": "七里香", "artist": "周杰伦", "pos": 50000, "dur": 299000, "playing": true, "has_progress": true, "matched": false, "raw": ""}
+{"t": "10:20:58", "ev": "song", "smtc": "晴天", "smtc_artist": "周杰伦"}
+{"t": "10:20:58", "ev": "tick", "title": "晴天", "artist": "周杰伦", "pos": 10000, "dur": 269000, "playing": true, "has_progress": true, "matched": false, "raw": ""}
+{"t": "10:20:58", "ev": "match", "matched": true, "smtc": "晴天", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "10:20:58", "ev": "song", "smtc": "七里香", "smtc_artist": "周杰伦"}
+{"t": "10:20:58", "ev": "song", "smtc": "晴天 - 周杰伦", "smtc_artist": "周杰伦"}
+{"t": "10:20:58", "ev": "tick", "title": "晴天 - 周杰伦", "artist": "周杰伦", "pos": 20000, "dur": 269000, "playing": true, "has_progress": true, "matched": false, "raw": ""}
+{"t": "10:20:58", "ev": "match", "matched": true, "smtc": "晴天 - 周杰伦", "smtc_artist": "周杰伦", "claim": "晴天", "claim_artist": "周杰伦", "candidates": ["晴天"]}
+{"t": "10:20:58", "ev": "song", "smtc": "晴天", "smtc_artist": "别人翻唱"}
+{"t": "10:20:58", "ev": "tick", "title": "晴天", "artist": "别人翻唱", "pos": 20000, "dur": 269000, "playing": true, "has_progress": true, "matched": false, "raw": ""}
+{"t": "11:06:31", "ev": "cover", "title": "暗封面", "color": "#141923", "light": false}
+{"t": "11:06:31", "ev": "cover", "title": "亮封面", "color": "#eef0e4", "light": true}
+{"t": "11:07:01", "ev": "cover", "title": "暗封面", "color": "#141923", "light": false}
+{"t": "11:07:01", "ev": "cover", "title": "亮封面", "color": "#eef0e4", "light": true}
+{"t": "11:20:49", "ev": "cover", "title": "暗封面", "color": "#141923", "light": false}
+{"t": "11:20:49", "ev": "cover", "title": "亮封面", "color": "#eef0e4", "light": true}
+{"t": "11:29:58", "ev": "cover", "title": "歌", "color": "#1e283c", "light": false}
+{"t": "11:29:58", "ev": "gate", "smtc_gate": false, "reason": "smtc_off"}
+{"t": "11:29:58", "ev": "gate", "smtc_gate": true}
+{"t": "11:30:09", "ev": "cover", "title": "歌", "color": "#1e283c", "light": false}
+{"t": "11:30:09", "ev": "gate", "smtc_gate": false, "reason": "smtc_off"}
+{"t": "11:30:09", "ev": "gate", "smtc_gate": true}
+{"t": "11:40:14", "ev": "gate", "smtc_gate": false, "reason": "unknown"}

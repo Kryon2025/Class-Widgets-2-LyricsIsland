@@ -1,46 +1,190 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
+import Qt5Compat.GraphicalEffects
 import QtQuick 2.15 as Quick
 import RinUI
 import ClassWidgets.Theme
 
+// 歌词岛：上一句 / 当前句 / 附加行（译文或下一句）+ 底部播放进度条。
+// - 当前句参考 BetterNCM 的 LyricBar：逐字/逐词点亮，唱到的字不透明并上浮 2px。
+// - 附加行区分两类：译文用与当前歌词相同的字号与亮度；下一句做虚化（真模糊）。
+// - 背景：SMTC 专辑封面 → 模糊 → 圆角遮罩，歌词颜色按方案自适应。
 Widget {
     id: root
-    // 不显示组件名称（基类顶部标题行），让歌词内容整体居中显示
     text: ""
 
-    // 固定组件宽度，与其他组件保持一致（不随设置改变）
     implicitWidth: 300
 
-    // 固定高度下的动态内部布局：
-    // 窗口高度随字号（保证文字完整），正文-译文间距按内容区剩余空间动态分配
-    property real lyricWinH: root.lyricSize + 4       // 主歌词窗口：文字高约1.25x + 边距
-    property real extraWinH: root.extraSize + 3       // 译文窗口
-    property real contentH: root.miniMode ? 34 : 38   // 内容区固定高度
-    property real gapDyn: Math.max(1, Math.min(4, root.contentH - root.lyricWinH - root.extraWinH))
-
     // ---- 设置 ----
-    property int lyricSize: root.settings && root.settings.lyric_font_size !== undefined
-                            ? root.settings.lyric_font_size : 16
-    property int extraSize: root.settings && root.settings.extra_font_size !== undefined
-                            ? root.settings.extra_font_size : 12
-    property string animMode: root.settings && root.settings.anim_mode === "float"
-                              ? "float" : "off"
-    property int scrollSeconds: root.settings && root.settings.scroll_seconds !== undefined
-                                ? root.settings.scroll_seconds : 8
-    property real scrollDelay: root.settings && root.settings.scroll_delay !== undefined
-                               ? root.settings.scroll_delay : 0.5
+    property int mainSize: root.settings && root.settings.lyric_font_size !== undefined
+                           ? root.settings.lyric_font_size : 13
+    property int subSize: root.settings && root.settings.sub_font_size !== undefined
+                          ? root.settings.sub_font_size : 10
     property bool autoShow: root.settings && root.settings.auto_show !== undefined
                             ? root.settings.auto_show : true
-    property string lyricColor: root.settings && root.settings.lyric_color !== undefined
-                                ? root.settings.lyric_color : "white"
+    property bool showProgress: root.settings && root.settings.show_progress !== undefined
+                                ? root.settings.show_progress : true
+    property bool allowUnverified: root.settings && root.settings.progress_unverified !== undefined
+                                   ? root.settings.progress_unverified : true
+    property bool showCover: root.settings && root.settings.show_cover !== undefined
+                             ? root.settings.show_cover : true
+    // auto / light / dark / vivid / soft / tinted / theme / white / black / custom
+    property string colorMode: root.settings && root.settings.lyric_color !== undefined
+                               ? root.settings.lyric_color : "auto"
+    property string customColor: root.settings && root.settings.lyric_color_custom !== undefined
+                                 ? root.settings.lyric_color_custom : "#ffffff"
 
-    // ---- 灵动显隐：有歌词自动弹出，无歌词自动隐藏（编辑模式下始终显示）----
+    // ---- SMTC 体检 ----
+    // 只有确认 SMTC 与歌词渠道是同一首歌，才启用需要 SMTC 的功能（进度条 / 封面背景 / 逐字同步）。
+    // 明确"不是同一首歌"时一律停用；状态未知时由"未核验也使用"开关决定。
+    readonly property bool smtcVerified: backend.matchState === "matched"
+    readonly property bool smtcUsable: root.smtcVerified
+                                       || (root.allowUnverified && backend.matchState === "unknown")
+    onSmtcUsableChanged: backend.smtcGate = root.smtcUsable
+
+    // ---- 封面与配色 ----
+    readonly property string coverUrl: backend.coverUrl
+    readonly property bool hasCover: root.showCover && root.smtcUsable && root.coverUrl !== ""
+    readonly property string coverColor: backend.coverColor !== "" ? backend.coverColor : "#808080"
+    // 没有封面时退回主题明暗
+    readonly property bool coverLight: root.hasCover ? backend.coverIsLight : !Theme.isDark()
+
+    readonly property real cvH: root.coverColor.hslHue
+    readonly property real cvS: root.coverColor.hslSaturation
+    readonly property real cvL: root.coverColor.hslLightness
+
+    // 歌词前景色
+    readonly property color fgColor: {
+        switch (root.colorMode) {
+        case "auto":   return root.coverLight ? "#15171c" : "#FFFFFF"
+        case "light":  return "#FFFFFF"
+        case "dark":   return "#15171c"
+        case "vivid":  return Qt.hsla(root.cvH, 0.95, root.coverLight ? 0.30 : 0.70, 1.0)
+        case "soft":   return Qt.hsla(root.cvH, 0.34, root.coverLight ? 0.24 : 0.86, 1.0)
+        case "tinted": return Qt.hsla(root.cvH, 0.55, root.coverLight ? 0.18 : 0.90, 1.0)
+        case "white":  return "#FFFFFF"
+        case "black":  return "#000000"
+        case "custom": return root.customColor
+        default:       return Theme.currentTheme.colors.textColor
+        }
+    }
+
+    // 压在封面上的遮罩（保证歌词可读）
+    readonly property color scrimColor: {
+        switch (root.colorMode) {
+        case "dark":  return "#FFFFFF"
+        case "light": return "#000000"
+        case "vivid": return "#000000"
+        case "tinted":
+            return Qt.hsla(root.cvH, root.coverLight ? 0.20 : 0.45,
+                           root.coverLight ? 0.92 : 0.08, 1.0)
+        default: return root.coverLight ? "#FFFFFF" : "#000000"
+        }
+    }
+    readonly property real scrimOpacity: {
+        switch (root.colorMode) {
+        case "vivid":  return 0.50
+        case "soft":   return 0.62
+        case "tinted": return 0.68
+        case "dark":   return 0.72
+        case "light":  return 0.55
+        default:       return 0.58
+        }
+    }
+
+    // karaoke 参数（对齐 LyricBar）
+    readonly property real unlitOpacity: 0.34
+    readonly property real idleOpacity: 0.42
+    readonly property real nextOpacity: 0.55
+    readonly property real liftY: -2
+    readonly property int karaokeFade: 200
+    readonly property real nextBlur: 0.75
+    readonly property real coverBlurRadius: 32
+
+    // 自适应：按上一句的实际长度定速，并提前约 1 秒播放完
+    readonly property int karaokeDuration: backend.lineDuration > 0
+                                           ? Math.max(1200, backend.lineDuration - 1000)
+                                           : 4000
+
+    // 逐字高亮：默认开；关掉则当前行整行满亮度
+    property bool karaokeOn: root.settings && root.settings.karaoke_enabled !== undefined
+                             ? root.settings.karaoke_enabled : true
+
+    property bool hasLyrics: backend.hasLyrics
+
+    // 分词：CJK 每字一个 token，西文按词，空白单独保留
+    function tokenize(s) {
+        if (!s)
+            return []
+        var re = /[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af]|[^\s\u4e00-\u9fff\u3400-\u4dbf\u3040-\u30ff\uac00-\ud7af]+|\s+/g
+        return s.match(re) || []
+    }
+
+    // ---- 背景：模糊封面 ----
+    backgroundArea: Item {
+        anchors.fill: parent
+        visible: root.hasCover
+
+        Image {
+            id: coverSrc
+            anchors.fill: parent
+            source: root.coverUrl
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            cache: false
+            visible: false
+            smooth: true
+        }
+
+        FastBlur {
+            id: coverBlur
+            anchors.fill: parent
+            source: coverSrc
+            radius: root.coverBlurRadius
+            visible: false
+        }
+
+        // 圆角遮罩源
+        Item {
+            id: coverMask
+            anchors.fill: parent
+            visible: false
+            Rectangle {
+                anchors.fill: parent
+                radius: root.cornerRadius
+                color: "white"
+            }
+        }
+
+        OpacityMask {
+            anchors.fill: parent
+            source: coverBlur
+            maskSource: coverMask
+        }
+
+        // 可读性遮罩
+        Rectangle {
+            anchors.fill: parent
+            radius: root.cornerRadius
+            color: root.scrimColor
+            opacity: root.scrimOpacity
+        }
+    }
+
+    // 灵动显隐
     property bool autoHidden: false
     readonly property bool shouldShow: editMode
-        || (backend.lyricStatus === "ok" && root.autoShow && !autoHidden)
+        || ((root.hasLyrics || backend.lyricStatus === "ok") && root.autoShow && !autoHidden)
     property bool actualVisible: true
+
+    // 歌曲暂停 / 停止多久后自动隐藏
+    readonly property int pauseHideMs: 10000
+    // 拿不到播放状态时的兜底：多久没有新歌词就隐藏
+    readonly property int quietHideMs: 60000
+    // 已知在暂停 / 已停止（不看核验闸门：隐藏与否跟"是不是同一首歌"无关）
+    readonly property bool playbackStalled: backend.playbackKnown && backend.playbackPaused
 
     function updateVisibility() {
         if (shouldShow) {
@@ -57,222 +201,331 @@ Widget {
     onShouldShowChanged: updateVisibility()
 
     Component.onCompleted: {
+        backend.smtcGate = root.smtcUsable
         actualVisible = shouldShow
-        idleTimer.start()
+        quietTimer.start()
     }
 
     width: actualVisible ? implicitWidth : 0
     visible: actualVisible
 
-    // 入场动画（类似灵动通知：弹性放大 + 淡入）
     SequentialAnimation {
         id: enterAnim
         ParallelAnimation {
-            NumberAnimation { target: root; property: "opacity"; from: 0; to: 1; duration: 300; easing.type: Easing.OutCubic }
-            NumberAnimation { target: root; property: "scale"; from: 0.8; to: 1; duration: 400; easing.type: Easing.OutBack }
+            NumberAnimation { target: root; property: "opacity"; from: 0; to: 1; duration: 320; easing.type: Easing.OutCubic }
+            NumberAnimation { target: root; property: "scale"; from: 0.94; to: 1; duration: 360; easing.type: Easing.OutCubic }
         }
         onFinished: actualVisible = shouldShow
     }
-
-    // 退场动画（缩小 + 淡出，完成后隐藏）
     SequentialAnimation {
         id: exitAnim
         ParallelAnimation {
-            NumberAnimation { target: root; property: "opacity"; from: 1; to: 0; duration: 200; easing.type: Easing.InQuad }
-            NumberAnimation { target: root; property: "scale"; from: 1; to: 0.9; duration: 250; easing.type: Easing.InQuad }
+            NumberAnimation { target: root; property: "opacity"; from: 1; to: 0; duration: 220; easing.type: Easing.InQuad }
+            NumberAnimation { target: root; property: "scale"; from: 1; to: 0.97; duration: 240; easing.type: Easing.InQuad }
         }
         onFinished: actualVisible = shouldShow
     }
 
-    // 空闲隐藏：30 秒没有新歌词则自动隐藏（如音乐软件停止推送）
+    // 暂停 / 停止计时：连续停住超过阈值就自动隐藏
     Timer {
-        id: idleTimer
-        interval: 30000
+        id: pauseTimer
+        interval: root.pauseHideMs
         repeat: false
         onTriggered: {
-            if (backend.lyricStatus === "ok") autoHidden = true
+            if (root.hasLyrics) root.autoHidden = true
         }
     }
 
-    // ---- 切换控制：新歌词到达时上一段立即消失，下一段进入（逐字/滚动）----
-    property string shownLyric: backend.lyricText
-    property string prevShown: ""
-
-    onShownLyricChanged: {
-        if (shownLyric === prevShown) return
-        // 新歌词：重建行内容并重新播放进入动画
-        newLine.text = shownLyric
-        newLine.epoch++
-        prevShown = shownLyric
-        idleTimer.restart()
-        autoHidden = false
+    // 兜底：拿不到播放状态时，长时间没有新歌词就隐藏
+    Timer {
+        id: quietTimer
+        interval: root.quietHideMs
+        repeat: false
+        onTriggered: {
+            if (root.hasLyrics && !backend.playbackKnown) root.autoHidden = true
+        }
     }
 
-    // 等待状态提示（编辑模式下可见）
+    Connections {
+        target: backend
+        function onProgressTick() {
+            if (root.playbackStalled) {
+                if (!pauseTimer.running) pauseTimer.start()
+            } else if (backend.playbackKnown) {
+                // 明确在播放 → 取消隐藏
+                pauseTimer.stop()
+                root.autoHidden = false
+            }
+            // 拿不到播放状态时不动 autoHidden，交给 quietTimer
+        }
+        function onLinesDirty() {
+            quietTimer.restart()
+            pauseTimer.stop()
+            root.autoHidden = false
+        }
+    }
+
+    // ---- 主体 ----
+    Item {
+        id: content
+        anchors.fill: parent
+        anchors.bottomMargin: root.miniMode ? -4 : -12
+        visible: root.hasLyrics
+
+        readonly property int visibleRows: root.miniMode ? 1 : 3
+        readonly property real rowH: Math.max(12, lyricView.height / visibleRows)
+
+        Quick.ListView {
+            id: lyricView
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: progressBar.top
+            anchors.bottomMargin: 4
+            clip: true
+            model: backend.lyricModel
+            currentIndex: backend.currentIndex
+
+            highlightRangeMode: Quick.ListView.StrictlyEnforceRange
+            preferredHighlightBegin: (height - content.rowH) / 2
+            preferredHighlightEnd: (height - content.rowH) / 2 + content.rowH
+            highlightMoveDuration: 950
+            snapMode: Quick.ListView.SnapToItem
+            boundsBehavior: Quick.Flickable.StopAtBounds
+            interactive: false
+
+            delegate: Item {
+                id: cell
+                width: lyricView.width
+                height: content.rowH
+                clip: true
+
+                // 行类型（来自模型）
+                readonly property string kind: (rowKind !== undefined) ? rowKind : "line"
+                readonly property string ekind: (extraKind !== undefined) ? extraKind : ""
+                readonly property bool isCur: Quick.ListView.isCurrentItem && cell.kind === "line"
+                readonly property bool isTrans: cell.kind === "extra" && cell.ekind === "trans"
+                readonly property bool isNext: cell.kind === "extra" && cell.ekind === "next"
+                // 译文与当前歌词同字号；其余用副字号
+                readonly property int fs: (cell.isCur || cell.isTrans) ? root.mainSize : root.subSize
+                readonly property var tokens: root.tokenize((lineText !== undefined) ? lineText : "")
+                readonly property int tokenCount: tokens.length
+                readonly property real textW: tokenRow.width
+                readonly property bool overflow: textW >= cell.width - 1
+                // 横向滚动：当前句必须在本句时长内滚完（留 700ms 起滚缓冲）
+                readonly property int marqueeMs: cell.isCur
+                                                 ? Math.max(900, root.karaokeDuration - 700)
+                                                 : Math.max(3200, (cell.textW - cell.width) * 38)
+                property real litCount: 0
+
+                Item {
+                    id: lineRoot
+                    y: 0
+                    height: cell.height
+                    width: Math.max(cell.textW, 1)
+                    scale: cell.isCur ? 1.0 : 0.9
+
+                    Behavior on scale {
+                        NumberAnimation { duration: 700; easing.type: Easing.OutCubic }
+                    }
+
+                    Row {
+                        id: tokenRow
+                        y: 0
+                        height: cell.height
+                        spacing: 0
+
+                        Repeater {
+                            id: tokenRepeater
+                            model: cell.tokens
+                            delegate: Quick.Text {
+                                text: modelData
+                                height: cell.height
+                                verticalAlignment: Quick.Text.AlignVCenter
+                                font.pixelSize: cell.fs
+                                font.weight: Font.DemiBold
+                                color: root.fgColor
+                                opacity: cell.isCur
+                                         ? ((!root.karaokeOn || index < cell.litCount) ? 1.0 : root.unlitOpacity)
+                                         : cell.isTrans ? 1.0
+                                         : cell.isNext ? root.nextOpacity
+                                         : root.idleOpacity
+                                y: (cell.isCur && root.karaokeOn && index < cell.litCount) ? root.liftY : 0
+
+                                Behavior on opacity {
+                                    NumberAnimation { duration: root.karaokeFade; easing.type: Easing.OutQuad }
+                                }
+                                Behavior on y {
+                                    NumberAnimation { duration: root.karaokeFade; easing.type: Easing.OutQuad }
+                                }
+                            }
+                        }
+
+                        // 下一句：虚化（整行模糊）
+                        layer.enabled: cell.isNext
+                        layer.effect: MultiEffect {
+                            blurEnabled: true
+                            blur: root.nextBlur
+                            blurMax: 24
+                            autoPaddingEnabled: true
+                        }
+                    }
+                }
+
+                NumberAnimation {
+                    id: karaoke
+                    target: cell
+                    property: "litCount"
+                    from: 0
+                    to: cell.tokenCount
+                    duration: root.karaokeDuration
+                    easing.type: Easing.Linear
+                }
+
+                function startKaraoke() {
+                    karaoke.stop()
+                    karaoke.paused = false
+                    cell.litCount = 0
+                    if (cell.isCur && cell.tokenCount > 0 && root.karaokeOn)
+                        cell.syncKaraoke()
+                }
+
+                // 混合驱动：优先用 SMTC 的真实播放位置对齐；
+                // 后端约每 500ms 刷新一次进度，每次都重新校准，
+                // 于是"读到的字"与播放同步进退，暂停时定格。
+                function syncKaraoke() {
+                    if (!(cell.isCur && root.karaokeOn && cell.tokenCount > 0))
+                        return
+                    var p = backend.lineProgress
+                    if (p < 0) {
+                        // 没有可用的 SMTC 进度：退回按上一句节奏估算。
+                        // 已读完就不再重播（否则每个心跳都会从头高亮）。
+                        if (cell.litCount >= cell.tokenCount - 0.001)
+                            return
+                        if (!karaoke.running) {
+                            karaoke.from = 0
+                            karaoke.to = cell.tokenCount
+                            karaoke.duration = root.karaokeDuration
+                            karaoke.start()
+                        }
+                        // 估算动画也要跟着播放状态走：暂停即定格，继续播放再接上
+                        if (backend.playbackPaused) {
+                            if (!karaoke.paused)
+                                karaoke.pause()
+                        } else if (karaoke.paused) {
+                            karaoke.resume()
+                        }
+                        return
+                    }
+                    karaoke.stop()
+                    cell.litCount = p * cell.tokenCount
+                    if (!backend.linePlaying)
+                        return                              // 暂停：定格在真实进度
+                    karaoke.from = cell.litCount
+                    karaoke.to = cell.tokenCount
+                    karaoke.duration = Math.max(250, backend.lineRemainMs)
+                    karaoke.start()
+                }
+
+                // 播放暂停 / 停止时让本行的动画一起停住，恢复播放再接上
+                function syncAnim() {
+                    if (root.playbackStalled) {
+                        if (marquee.running && !marquee.paused)
+                            marquee.pause()
+                    } else if (marquee.paused) {
+                        marquee.resume()
+                    }
+                    syncKaraoke()
+                }
+
+                // 后端每次刷新进度就校准一次
+                Connections {
+                    target: backend
+                    function onProgressTick() {
+                        cell.syncAnim()
+                    }
+                }
+
+                function relayout() {
+                    marquee.stop()
+                    lineRoot.x = 0
+                    if (overflow) {
+                        marquee.start()
+                        if (root.playbackStalled)
+                            marquee.pause()
+                    } else {
+                        lineRoot.x = Math.max(0, (cell.width - textW) / 2)
+                    }
+                }
+
+                onTokenCountChanged: {
+                    relayout()
+                    startKaraoke()
+                }
+                onTextWChanged: relayout()
+                onWidthChanged: relayout()
+                onIsCurChanged: startKaraoke()
+                Component.onCompleted: {
+                    relayout()
+                    startKaraoke()
+                }
+
+                // 超宽歌词：从头部向左滚动，滚到全部展示完就停住，不循环
+                SequentialAnimation {
+                    id: marquee
+                    PauseAnimation { duration: 700 }
+                    NumberAnimation {
+                        target: lineRoot
+                        property: "x"
+                        from: 0
+                        to: cell.width - cell.textW
+                        duration: cell.marqueeMs
+                        easing.type: Easing.Linear
+                    }
+                }
+            }
+        }
+
+        // 播放进度条：钉在组件最底部
+        ProgressBar {
+            id: progressBar
+            // SMTC 可用就用 SMTC 进度；否则用歌词渠道自带的进度（若有）
+            visible: root.showProgress && backend.hasProgress
+                     && (root.smtcUsable || backend.lyricProgressAvailable)
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            height: 4
+            value: backend.progress
+
+            Behavior on value {
+                NumberAnimation { duration: 400; easing.type: Easing.Linear }
+            }
+        }
+    }
+
+    // 回退：有内容但不是多行歌词时，单行显示
     Quick.Text {
-        id: statusText
         anchors.centerIn: parent
-        width: parent.width - 24
-        visible: backend.lyricStatus !== "ok"
+        width: parent.width
+        visible: !root.hasLyrics && backend.lyricStatus === "ok"
+        text: backend.lyricText
+        horizontalAlignment: Quick.Text.AlignHCenter
+        elide: Quick.Text.ElideRight
+        color: root.fgColor
+        font.pixelSize: root.mainSize
+        font.weight: Font.DemiBold
+    }
+
+    // 等待提示
+    Quick.Text {
+        anchors.centerIn: parent
+        width: parent.width
+        visible: backend.lyricStatus !== "ok" && !root.hasLyrics
         text: qsTr("等待音乐软件侧传输歌词...")
         horizontalAlignment: Quick.Text.AlignHCenter
         wrapMode: Quick.Text.Wrap
-        color: Theme.currentTheme.colors.textSecondaryColor
+        color: root.hasCover ? root.fgColor : Theme.currentTheme.colors.textSecondaryColor
         font.pixelSize: 13
-    }
-
-    // 歌词层：固定尺寸容器（不随内容变化，避免撑大组件）
-    // 组件总高由应用固定（normal 100 / mini 56），内容区约 38/34px
-    // 新版主程序标题行在 text 为空时不占位（visible:false），
-    // 因此不再需要 -13 上移补偿，直接垂直居中即可。
-    // clip 关闭：字号很大时文字完整溢出显示，不被裁切
-    Item {
-        id: fixedArea
-        width: 300
-        height: root.contentH
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: 0
-        clip: false
-
-        Item {
-            id: lyricArea
-            anchors.fill: parent
-            visible: backend.lyricStatus === "ok"
-
-            // 主歌词滚动窗口：左右各留 24px 边距，歌词在窗口内滚动，
-            // 裁剪只发生在窗口边缘，滚动全程与组件边界保持距离
-            Item {
-                id: lyricScrollView
-                x: 24
-                width: 252
-                y: 0
-                height: root.lyricWinH
-                clip: true
-
-                LyricsLine {
-                    id: newLine
-                    objectName: "lyricNewLine"
-                    anchors.fill: parent
-                    fontSize: root.lyricSize
-                    anim: root.animMode
-                    lyricColor: root.lyricColor
-                    text: root.shownLyric
-                    availWidth: 252
-                    scrollSeconds: root.scrollSeconds
-                    scrollDelay: root.scrollDelay
-                }
-            }
-
-            // 译文窗口：同样左右各留 24px 边距，与正文间距随字号动态调整
-            Item {
-                id: extraSlot
-                y: root.lyricWinH + root.gapDyn
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 252
-                height: root.extraWinH
-                clip: true
-
-                Quick.Text {
-                    id: extraLabel
-                    width: 252
-                    x: Math.max(0, (252 - contentWidth) / 2)
-                    // 防闪：extra 清空时延迟隐藏，内容抖动/短暂空档期间保持显示，
-                    // 避免"下一句/译文显示出来马上又消失"
-                    visible: backend.extraText !== "" || extraHold
-                    property bool extraHold: false
-                    text: backend.extraText
-                    color: Theme.currentTheme.colors.textSecondaryColor
-                    font.pixelSize: root.extraSize
-                    // 与主歌词一致的字重/字族，避免以组件框默认字体显示
-                    font.weight: Font.DemiBold
-                    opacity: 0
-
-                    Timer {
-                        id: extraHoldTimer
-                        interval: 350
-                        repeat: false
-                        onTriggered: extraLabel.extraHold = false
-                    }
-
-                    Connections {
-                        target: backend
-                        function onLyricsChanged() {
-                            if (backend.extraText !== "") {
-                                extraLabel.extraHold = true
-                                extraHoldTimer.stop()
-                            } else {
-                                extraHoldTimer.start()
-                            }
-                        }
-                    }
-
-                    Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutQuad } }
-
-                    // 滚动前停顿（时长可由设置调整，默认 0.5s）
-                    Timer {
-                        id: extraScrollDelay
-                        interval: Math.max(50, Math.round(root.scrollDelay * 1000))
-                        repeat: false
-                        onTriggered: {
-                            if (extraLabel.contentWidth <= extraLabel.width) return
-                            extraScrollTimer.from = 0
-                            extraScrollTimer.to = extraLabel.width - extraLabel.contentWidth
-                            extraScrollTimer.steps = 0
-                            extraScrollTimer.totalSteps = Math.max(1, Math.round(root.scrollSeconds * 1000 / 16))
-                            extraScrollTimer.start()
-                        }
-                    }
-
-                    // 译文滚动：与主歌词一致，在窗口内滚动（窗口与边界保持 24px 距离）
-                    Timer {
-                        id: extraScrollTimer
-                        interval: 16
-                        repeat: true
-                        property real from: 0
-                        property real to: 0
-                        property int steps: 0
-                        property int totalSteps: 240
-
-                        onTriggered: {
-                            steps++
-                            var t = steps / totalSteps
-                            if (t >= 1) {
-                                // 终点：最后一个字停在窗口右缘（用实际渲染宽）
-                                extraLabel.x = extraLabel.width - extraLabel.contentWidth
-                                stop()
-                                return
-                            }
-                            extraLabel.x = from + (to - from) * t
-                        }
-                    }
-
-                    // 用 contentWidth（实际渲染宽）判断是否溢出，避免布局时序误判
-                    function place() {
-                        if (contentWidth > width) {
-                            x = 0
-                            extraScrollTimer.stop()
-                            extraScrollDelay.restart()
-                        } else {
-                            extraScrollTimer.stop()
-                            extraScrollDelay.stop()
-                            x = Math.max(0, (252 - contentWidth) / 2)
-                        }
-                    }
-
-                    onTextChanged: {
-                        if (text !== "") {
-                            opacity = 0
-                            opacity = 1
-                            place()
-                        }
-                    }
-                    // 文本布局完成后校正水平位置（contentWidth 初始为 0，就绪后再定位）
-                    onContentWidthChanged: {
-                        if (text !== "") place()
-                    }
-                }
-            }
-        }
     }
 }
