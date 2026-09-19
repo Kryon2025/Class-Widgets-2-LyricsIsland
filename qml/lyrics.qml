@@ -174,16 +174,15 @@ Widget {
     }
 
     // 灵动显隐
-    property bool autoHidden: false
+    // 整个显隐判断只依据歌词有无，完全不看 SMTC 播放状态：
+    //   waiting/ok  → 有词或还在等推送，显示
+    //   lyricsAbsent → 明确没有歌词（宽限期到点仍无词，或对方推了纯音乐占位），隐藏
     readonly property bool shouldShow: editMode
-        || ((root.hasLyrics || backend.lyricStatus === "ok") && root.autoShow && !autoHidden)
+        || ((root.hasLyrics || backend.lyricStatus === "ok" || backend.lyricStatus === "waiting")
+            && root.autoShow && !backend.lyricsAbsent)
     property bool actualVisible: true
-
-    // 歌曲暂停 / 停止多久后自动隐藏
-    readonly property int pauseHideMs: 10000
-    // 拿不到播放状态时的兜底：多久没有新歌词就隐藏
-    readonly property int quietHideMs: 60000
-    // 已知在暂停 / 已停止（不看核验闸门：隐藏与否跟"是不是同一首歌"无关）
+    // 已知在暂停 / 已停止：**只用于让逐行歌词动画跟着停住**（避免高亮跑偏），
+    // 与组件的显隐判断无关 —— 显隐只看歌词有无，不看播放状态。
     readonly property bool playbackStalled: backend.playbackKnown && backend.playbackPaused
 
     function updateVisibility() {
@@ -203,7 +202,6 @@ Widget {
     Component.onCompleted: {
         backend.smtcGate = root.smtcUsable
         actualVisible = shouldShow
-        quietTimer.start()
     }
 
     width: actualVisible ? implicitWidth : 0
@@ -224,45 +222,6 @@ Widget {
             NumberAnimation { target: root; property: "scale"; from: 1; to: 0.97; duration: 240; easing.type: Easing.InQuad }
         }
         onFinished: actualVisible = shouldShow
-    }
-
-    // 暂停 / 停止计时：连续停住超过阈值就自动隐藏
-    Timer {
-        id: pauseTimer
-        interval: root.pauseHideMs
-        repeat: false
-        onTriggered: {
-            if (root.hasLyrics) root.autoHidden = true
-        }
-    }
-
-    // 兜底：拿不到播放状态时，长时间没有新歌词就隐藏
-    Timer {
-        id: quietTimer
-        interval: root.quietHideMs
-        repeat: false
-        onTriggered: {
-            if (root.hasLyrics && !backend.playbackKnown) root.autoHidden = true
-        }
-    }
-
-    Connections {
-        target: backend
-        function onProgressTick() {
-            if (root.playbackStalled) {
-                if (!pauseTimer.running) pauseTimer.start()
-            } else if (backend.playbackKnown) {
-                // 明确在播放 → 取消隐藏
-                pauseTimer.stop()
-                root.autoHidden = false
-            }
-            // 拿不到播放状态时不动 autoHidden，交给 quietTimer
-        }
-        function onLinesDirty() {
-            quietTimer.restart()
-            pauseTimer.stop()
-            root.autoHidden = false
-        }
     }
 
     // ---- 主体 ----

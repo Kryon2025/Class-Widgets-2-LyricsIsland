@@ -32,6 +32,21 @@ from PySide6.QtGui import QImage
 
 from ClassWidgets.SDK import CW2Plugin, PluginAPI
 
+
+def _data_dir() -> Path:
+    """插件用户数据目录：<主程序根>/configs/plugins/<插件ID>。
+
+    不能写进插件自己的目录：覆盖更新会把 plugins/<插件ID>/ 整个替换掉，
+    专辑封面缓存和上一次的播放状态会跟着消失。
+    """
+    try:
+        d = Path(__file__).resolve().parent.parent.parent / "configs" / "plugins" / "com.lyricsisland"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+    except Exception:
+        return Path(__file__).resolve().parent
+
+
 # smtc_progress 与 main.py 同目录；SDK 一般已把插件目录加入 sys.path，这里兜底
 try:
     from smtc_progress import SmtcProgress
@@ -307,6 +322,16 @@ class Plugin(CW2Plugin):
         self._lyric = ""
         self._extra = ""
         self._status = "waiting"
+        # —— 「没有歌词就隐藏」的判定状态（纯歌词侧，刻意不掺 SMTC）——
+        # 换歌后开始计时；宽限期到点仍一行歌词都没有，就认定「无歌词 / 纯音乐」。
+        # 真正的判定在 _get_lyrics_absent()：行数为 0 且宽限期已过，二者同时成立才算。
+        self._lyrics_grace_expired = False
+        self._lyrics_grace_ms = 4000
+        from PySide6.QtCore import QTimer as _QTimer
+        self._lyrics_grace = _QTimer(self)
+        self._lyrics_grace.setSingleShot(True)
+        self._lyrics_grace.setInterval(self._lyrics_grace_ms)
+        self._lyrics_grace.timeout.connect(self._on_lyrics_grace_timeout)
         self.server: Optional[HTTPServerWithStop] = None
         self._server_thread: Optional[threading.Thread] = None
 
@@ -357,6 +382,23 @@ class Plugin(CW2Plugin):
     lyricText = Property(str, _get_lyric, notify=lyricsChanged)
     extraText = Property(str, _get_extra, notify=lyricsChanged)
     lyricStatus = Property(str, _get_status, notify=lyricsChanged)
+
+    # ---- QML 属性：没有歌词就隐藏 ----
+    def _get_lyrics_absent(self):
+        """是否"确实没有歌词"—— 供 QML 决定隐藏组件。
+
+        刻意只看歌词，不掺任何 SMTC 播放状态：
+        - 模型里已经有歌词行 → 有词，不隐藏；
+        - 一行都还没有，且宽限期已过（或对方明确推了"纯音乐"占位）→ 认定无词。
+
+        宽限期是用来避开「换歌 → 歌词推送到达」之间那段空窗的，
+        否则每次换歌组件都会闪一下（隐藏再弹出）。
+        """
+        if self._model.count() > 0:
+            return False
+        return bool(self._lyrics_grace_expired)
+
+    lyricsAbsent = Property(bool, _get_lyrics_absent, notify=linesDirty)
 
     # ---- QML 属性：三行 + 进度 ----
     def _get_model(self):
@@ -446,7 +488,7 @@ class Plugin(CW2Plugin):
         if self._cover_url:
             for ext in (".png", ".jpg"):
                 try:
-                    Path(__file__).resolve().parent.joinpath("cover" + ext).unlink(missing_ok=True)
+                    _data_dir().joinpath("cover" + ext).unlink(missing_ok=True)
                 except Exception:
                     pass
         self._cover_url = ""
@@ -495,7 +537,7 @@ class Plugin(CW2Plugin):
     def _apply_post(self, payload):
         try:
             logger.info(f"[lyricsisland] payload: {payload}")
-            Path(__file__).resolve().parent.joinpath("last_payload.json").write_text(
+            _data_dir().joinpath("last_payload.json").write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception:
             pass
@@ -518,8 +560,17 @@ class Plugin(CW2Plugin):
             self._extra = extra
             self._status = "ok"
             self._refresh_match()
+            # 歌词侧检测到换歌 → 清掉上一首残留，重新开始等新歌词。
+            # 这一步是「没有歌词就隐藏」能生效的前提：不清空的话
+            # 上一首的行会一直留在模型里，hasLyrics 恒为真，永远不隐藏。
+            self._begin_lyrics_wait()
             self.lyricsChanged.emit()
             self.progressTick.emit()
+            return
+
+        # 对方推的是"纯音乐"占位（如 `[00:00.00]纯音乐，请欣赏`）→ 直接判定无词
+        if cur and self._is_pure_music(cur):
+            self._mark_no_lyrics("pure")
             return
 
         # 1) 完整歌词表
@@ -587,6 +638,61 @@ class Plugin(CW2Plugin):
 
         self._update_progress(payload)
 
+    # ── 「没有歌词就隐藏」的判定（纯歌词侧，不依赖 SMTC）────────────
+
+    _PURE_MUSIC_RE = re.compile(r"纯音乐|请欣赏|instrumental|no\s*lyric|无歌词|暂无歌词", re.I)
+    # 结构字符：LRC 时间戳、标点、空白、数字
+    _STRUCT_RE = re.compile(r"[\s\d:\-–—,，。.、!！?？~～\[\]()（）]+")
+
+    def _is_pure_music(self, text):
+        """判断一条歌词是不是"纯音乐"占位。
+
+        只在**整条内容被占位词和结构字符完全覆盖**时才判定为纯音乐，
+        因此 `[00:00.00]纯音乐，请欣赏` 会命中，而任何含真实文字的歌词都不会。
+        刻意**不匹配**"作词/作曲"：那是正常歌词里常见的署名行，
+        匹配了会把真歌误判成纯音乐。
+        """
+        if not text or not str(text).strip():
+            return False
+        try:
+            rest = self._PURE_MUSIC_RE.sub("", str(text))
+            rest = self._STRUCT_RE.sub("", rest)
+        except Exception:
+            return False
+        return rest == ""
+
+    def _begin_lyrics_wait(self):
+        """歌词侧检测到换歌：清空上一首的歌词，重新开始等新歌词。"""
+        try:
+            if self._model.count() > 0:
+                self._model.reset_rows([])
+                self._idx = 0
+                self.linesDirty.emit()
+        except Exception:
+            pass
+        self._lyrics_grace_expired = False
+        try:
+            self._lyrics_grace.start()
+        except Exception:
+            pass
+
+    def _mark_no_lyrics(self, status="empty"):
+        """明确判定没有可显示的歌词（空 / 纯音乐）。"""
+        self._status = status
+        self._lyrics_grace_expired = True
+        try:
+            self._lyrics_grace.stop()
+        except Exception:
+            pass
+        self.lyricsChanged.emit()
+        self.linesDirty.emit()
+
+    def _on_lyrics_grace_timeout(self):
+        """换歌后等满宽限期，仍然一行歌词都没有 → 判定无歌词。"""
+        if self._model.count() == 0:
+            self._lyrics_grace_expired = True
+            self.linesDirty.emit()
+
     def _emit_all(self):
         self.linesDirty.emit()
         self.progressTick.emit()
@@ -619,7 +725,7 @@ class Plugin(CW2Plugin):
         try:
             rec = {"t": time.strftime("%H:%M:%S"), "ev": event}
             rec.update(fields)
-            p = Path(__file__).resolve().parent.joinpath("smtc_debug.log")
+            p = _data_dir().joinpath("smtc_debug.log")
             if p.exists() and p.stat().st_size > _DEBUG_MAX_BYTES:
                 p.write_text("", encoding="utf-8")
             with p.open("a", encoding="utf-8") as f:
@@ -807,7 +913,7 @@ class Plugin(CW2Plugin):
             col = small.pixelColor(0, 0)
             lum = 0.2126 * col.redF() + 0.7152 * col.greenF() + 0.0722 * col.blueF()
             ext = ".png" if raw[:4] == b"\x89PNG" else ".jpg"
-            path = Path(__file__).resolve().parent.joinpath("cover" + ext)
+            path = _data_dir().joinpath("cover" + ext)
             path.write_bytes(raw)
             self._cover_seq += 1
             self._cover_url = path.as_uri() + f"?v={self._cover_seq}"
