@@ -1,6 +1,20 @@
-# 歌词岛 (LyricsIsland) — Class Widgets 2
+<div align="center">
 
-在 **Class Widgets 2** 里显示当前播放歌曲的实时歌词组件。
+<img src="icon.png" height="120" alt="歌词(Lyricsisland)">
+<h1>歌词岛 (LyricsIsland) — Class Widgets 2</h1>
+
+<p>在 <b>Class Widgets 2</b> 里显示当前播放歌曲的实时歌词组件。</p>
+
+[![版本](https://img.shields.io/badge/%E7%89%88%E6%9C%AC-1.1.1-5A9BFF?style=for-the-badge)](https://github.com/Kryon2025/Class-Widgets-2-LyricsIsland/releases)
+[![星标](https://img.shields.io/github/stars/Kryon2025/Class-Widgets-2-LyricsIsland?style=for-the-badge&color=orange&label=%E6%98%9F%E6%A0%87)](https://github.com/Kryon2025/Class-Widgets-2-LyricsIsland)
+[![开源许可](https://img.shields.io/github/license/Kryon2025/Class-Widgets-2-LyricsIsland?style=for-the-badge&label=%E5%BC%80%E6%BA%90%E8%AE%B8%E5%8F%AF%E8%AF%81)](https://github.com/Kryon2025/Class-Widgets-2-LyricsIsland/blob/main/LICENSE)
+[![下载量](https://img.shields.io/github/downloads/Kryon2025/Class-Widgets-2-LyricsIsland/total.svg?label=%E4%B8%8B%E8%BD%BD%E9%87%8F&color=green&style=for-the-badge)](https://github.com/Kryon2025/Class-Widgets-2-LyricsIsland/releases)
+
+</div>
+
+> [!NOTE]
+> 当前版本 **1.1.1**，要求 Class Widgets 2 的插件 API `~=0.6.0`。
+> 在 [插件广场](https://plaza.cw.rinlit.cn/plugins/com.lyricsisland) 可以一键安装/更新，也可以在 Release 页下载 `.cwplugin` 手动导入。
 
 音乐软件侧向本地 `127.0.0.1:50063` 推送歌词，组件居中显示「上一句 / 当前句 / 附加行」三行；
 同时从 **Windows 系统媒体会话（SMTC）** 读取真实播放进度、播放状态与专辑封面，
