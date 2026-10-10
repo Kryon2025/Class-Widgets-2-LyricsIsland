@@ -1,6 +1,6 @@
 {
-  "id": "com.lyricsisland",
-  "name": "歌词(Lyricsisland)",
+  "id": "com.lyriswidget",
+  "name": "歌词(Lyriswidget)",
   "version": "1.1.2",
   "api_version": "~=0.6.0",
   "entry": "main.py",

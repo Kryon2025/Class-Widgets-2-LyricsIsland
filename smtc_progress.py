@@ -148,7 +148,7 @@ class SmtcProgress(QObject):
                 DataReader.from_buffer(buf).read_bytes(arr)
                 return bytes(arr)
         except Exception as e:
-            logger.debug(f"[lyricsisland] 读取封面失败: {e}")
+            logger.debug(f"[lyriswidget] 读取封面失败: {e}")
             return b""
 
     @staticmethod

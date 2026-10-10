@@ -27,6 +27,10 @@ SettingsLayout {
     property bool showCoverValue: true
     onShowCoverValueChanged: settings.show_cover = showCoverValue
 
+    // 背景透明度（%）
+    property int bgOpacityValue: 100
+    onBgOpacityValueChanged: settings.bg_opacity = bgOpacityValue
+
     property bool showProgressValue: true
     onShowProgressValueChanged: settings.show_progress = showProgressValue
 
@@ -48,6 +52,7 @@ SettingsLayout {
         colorModeValue = settings.lyric_color !== undefined ? settings.lyric_color : "auto"
         customColorValue = settings.lyric_color_custom !== undefined ? settings.lyric_color_custom : "#ffffff"
         showCoverValue = settings.show_cover !== undefined ? settings.show_cover : true
+        bgOpacityValue = settings.bg_opacity !== undefined ? settings.bg_opacity : 100
         showProgressValue = settings.show_progress !== undefined ? settings.show_progress : true
         autoShowValue = settings.auto_show !== undefined ? settings.auto_show : true
         allowUnverifiedValue = settings.progress_unverified !== undefined ? settings.progress_unverified : false
@@ -62,6 +67,25 @@ SettingsLayout {
         Switch {
             checked: root.showCoverValue
             onCheckedChanged: root.showCoverValue = checked
+        }
+
+        RowLayout {
+            spacing: 8
+            Button {
+                text: "−"
+                implicitWidth: 36
+                onClicked: bgOpacityValue = Math.max(0, bgOpacityValue - 5)
+            }
+            Text {
+                Layout.preferredWidth: 80
+                horizontalAlignment: Text.AlignHCenter
+                text: bgOpacityValue + "%"
+            }
+            Button {
+                text: "+"
+                implicitWidth: 36
+                onClicked: bgOpacityValue = Math.min(100, bgOpacityValue + 5)
+            }
         }
     }
 

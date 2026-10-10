@@ -40,7 +40,7 @@ def _data_dir() -> Path:
     专辑封面缓存和上一次的播放状态会跟着消失。
     """
     try:
-        d = Path(__file__).resolve().parent.parent.parent / "configs" / "plugins" / "com.lyricsisland"
+        d = Path(__file__).resolve().parent.parent.parent / "configs" / "plugins" / "com.lyriswidget"
         d.mkdir(parents=True, exist_ok=True)
         return d
     except Exception:
@@ -69,10 +69,10 @@ def _restore_winrt_native() -> None:
                 shutil.copy2(stash, target)
                 restored.append(target.name)
         if restored and log is not None:
-            log.info(f"[lyricsisland] 已还原 winrt 原生模块: {' '.join(restored)}")
+            log.info(f"[lyriswidget] 已还原 winrt 原生模块: {' '.join(restored)}")
     except Exception as e:                                  # noqa: BLE001
         if log is not None:
-            log.warning(f"[lyricsisland] 还原 winrt 原生模块失败: {e}")
+            log.warning(f"[lyriswidget] 还原 winrt 原生模块失败: {e}")
 
 
 _restore_winrt_native()
@@ -93,7 +93,7 @@ except ImportError:  # pragma: no cover
     netease_lyrics = None
 
 # 常量定义
-WIDGET_ID = "com.lyricsisland"
+WIDGET_ID = "com.lyriswidget"
 SERVER_HOST = "127.0.0.1"
 SERVER_PORT = 50063
 
@@ -513,6 +513,13 @@ class Plugin(CW2Plugin):
         self._recompute_progress()
         self.progressTick.emit()
 
+    def _get_bg_opacity(self) -> int:
+        """歌词组件背景透明度（0-100，100 = 原样）。仅缩放封面遮罩浓度。"""
+        try:
+            return max(0, min(100, int(self._config.bg_opacity)))
+        except Exception:                                # noqa: BLE001
+            return 100
+
     def _release_cover(self):
         """释放封面：删掉落盘文件并清空，图片与解码占用随之释放。"""
         if self._cover_url:
@@ -548,6 +555,7 @@ class Plugin(CW2Plugin):
     coverUrl = Property(str, _get_cover_url, notify=coverChanged)
     coverIsLight = Property(bool, _get_cover_light, notify=coverChanged)
     coverColor = Property(str, _get_cover_color, notify=coverChanged)
+    bgOpacity = Property(int, _get_bg_opacity, notify=coverChanged)
     # SMTC 体检闸门：由界面按核验结果写入，未通过即停用 SMTC 功能
     smtcGate = Property(bool, _get_smtc_gate, _set_smtc_gate)
     matchState = Property(str, _get_match_state, notify=progressTick)
@@ -566,7 +574,7 @@ class Plugin(CW2Plugin):
     @Slot(dict)
     def _apply_post(self, payload):
         try:
-            logger.info(f"[lyricsisland] payload: {payload}")
+            logger.info(f"[lyriswidget] payload: {payload}")
             _data_dir().joinpath("last_payload.json").write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception:
@@ -784,7 +792,7 @@ class Plugin(CW2Plugin):
             self._smtc.thumbnail.connect(self._on_thumbnail)
             self._smtc.start()
         except Exception as e:
-            logger.error(f"[lyricsisland] SMTC 启动失败: {e}")
+            logger.error(f"[lyriswidget] SMTC 启动失败: {e}")
             self._smtc = None
 
     def _stop_smtc(self):
@@ -792,7 +800,7 @@ class Plugin(CW2Plugin):
             try:
                 self._smtc.stop()
             except Exception as e:
-                logger.error(f"[lyricsisland] SMTC 停止失败: {e}")
+                logger.error(f"[lyriswidget] SMTC 停止失败: {e}")
             self._smtc = None
 
     @Slot(bool)
@@ -923,7 +931,7 @@ class Plugin(CW2Plugin):
             if best is not None and best_score >= 3.6:
                 dur = int(best.get("duration") or 0)
         except Exception as e:
-            logger.debug(f"[lyricsisland] duration lookup failed: {e}")
+            logger.debug(f"[lyriswidget] duration lookup failed: {e}")
         self._durFound.emit(title, artist, dur)
 
     def _on_thumbnail(self, title, data):
@@ -953,7 +961,7 @@ class Plugin(CW2Plugin):
                             light=self._cover_is_light)
             self.coverChanged.emit()
         except Exception as e:
-            logger.debug(f"[lyricsisland] 处理封面失败: {e}")
+            logger.debug(f"[lyriswidget] 处理封面失败: {e}")
 
     @Slot(str, str, int)
     def _on_duration_found(self, title, artist, dur):
@@ -992,6 +1000,7 @@ class Plugin(CW2Plugin):
                 "lyric_color": "auto",
                 "lyric_color_custom": "#ffffff",
                 "show_cover": True,
+                "bg_opacity": 100,
                 "auto_show": True,
                 "show_progress": True,
                 "progress_unverified": False,
@@ -1004,7 +1013,7 @@ class Plugin(CW2Plugin):
         )
         self._start_server()
         self._start_smtc()
-        print(f"[lyricsisland] 插件已加载，服务端口 {SERVER_PORT}")
+        print(f"[lyriswidget] 插件已加载，服务端口 {SERVER_PORT}")
 
     def on_unload(self):
         global _backend
@@ -1012,7 +1021,7 @@ class Plugin(CW2Plugin):
         self._stop_server()
         if _backend is self:
             _backend = None
-        print("[lyricsisland] 插件已卸载")
+        print("[lyriswidget] 插件已卸载")
 
     # ---- HTTP 服务 ----
     def _start_server(self):

@@ -83,7 +83,7 @@ Widget {
         default: return root.coverLight ? "#FFFFFF" : "#000000"
         }
     }
-    readonly property real scrimOpacity: {
+    readonly property real scrimBase: {
         switch (root.colorMode) {
         case "vivid":  return 0.50
         case "soft":   return 0.62
@@ -92,6 +92,12 @@ Widget {
         case "light":  return 0.55
         default:       return 0.58
         }
+    }
+    // 背景透明度：0-100 作为百分比缩放遮罩浓度（100 = 原样）
+    readonly property real scrimOpacity: {
+        var pct = backend.bgOpacity
+        if (pct === undefined || pct === null) pct = 100
+        return root.scrimBase * (Math.max(0, Math.min(100, pct)) / 100)
     }
 
     // karaoke 参数（对齐 LyricBar）
