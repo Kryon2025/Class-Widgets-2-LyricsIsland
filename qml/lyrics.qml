@@ -56,7 +56,7 @@ Widget {
     readonly property real cvL: root.coverColor.hslLightness
 
     // 歌词前景色
-    readonly property color fgColor: {
+    readonly property color fgColorRaw: {
         switch (root.colorMode) {
         case "auto":   return root.coverLight ? "#15171c" : "#FFFFFF"
         case "light":  return "#FFFFFF"
@@ -99,6 +99,65 @@ Widget {
         if (pct === undefined || pct === null) pct = 100
         return root.scrimBase * (Math.max(0, Math.min(100, pct)) / 100)
     }
+
+    // ── 背景自适应配色（WCAG 2.1 对比度）──────────────────────────────
+    // 依据：正文文字对比度 ≥ 4.5:1，大字号与 UI 组件 ≥ 3:1，按相对亮度计算。
+    function wcagLin(c) {
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    }
+    function wcagLuminance(c) {
+        return 0.2126 * wcagLin(c.r) + 0.7152 * wcagLin(c.g) + 0.0722 * wcagLin(c.b)
+    }
+    function wcagContrast(a, b) {
+        var la = wcagLuminance(a), lb = wcagLuminance(b)
+        var hi = Math.max(la, lb), lo = Math.min(la, lb)
+        return (hi + 0.05) / (lo + 0.05)
+    }
+
+    // 进度条与文字实际压着的底色：封面色与遮罩色按透明度混合后的结果
+    readonly property color backdropColor: {
+        var cover = root.hasCover ? root.coverColor : Theme.currentTheme.colors.background
+        if (!root.hasCover) return cover
+        // 遮罩色：亮封面用近白、暗封面用近黑（与 scrimColor 的各档一致）
+        var sr = root.coverLight ? 1.0 : 0.0
+        var a = Math.max(0, Math.min(1, root.scrimOpacity))
+        return Qt.rgba(cover.r * (1 - a) + sr * a,
+                       cover.g * (1 - a) + sr * a,
+                       cover.b * (1 - a) + sr * a, 1)
+    }
+
+    // 保证对比度：先用给定色，不达标就朝黑/白推进，取第一个达标的
+    function ensureContrast(base, backdrop, need) {
+        if (wcagContrast(base, backdrop) >= need) return base
+        // 两端都算，取能拿到更高对比度的那一端：
+        // 中灰背景（亮度约 0.2~0.45）用阈值判断会选错方向，
+        // 例如 #858585 对白仅 3.6:1、对黑却有 5.8:1。
+        var toBlack = wcagContrast(Qt.rgba(0, 0, 0, 1), backdrop)
+        var toWhite = wcagContrast(Qt.rgba(1, 1, 1, 1), backdrop)
+        var t = toBlack >= toWhite ? Qt.rgba(0, 0, 0, 1) : Qt.rgba(1, 1, 1, 1)
+        for (var i = 1; i <= 20; i++) {
+            var k = i / 20
+            var c = Qt.rgba(base.r + (t.r - base.r) * k,
+                            base.g + (t.g - base.g) * k,
+                            base.b + (t.b - base.b) * k, 1)
+            if (wcagContrast(c, backdrop) >= need) return c
+        }
+        return t
+    }
+
+    // 进度条颜色：跟随封面主色相，但按 UI 组件标准保证 ≥ 3:1
+    readonly property color barColor: root.hasCover
+        ? root.ensureContrast(
+              Qt.hsla(root.cvH, root.coverLight ? 0.55 : 0.85,
+                      root.coverLight ? 0.32 : 0.74, 1.0),
+              root.backdropColor, 3.0)
+        : Theme.currentTheme.colors.primaryColor
+
+    // 歌词文字：各档配色先取"原始色"，再按正文标准保证 ≥ 4.5:1
+    // 于是鲜艳 / 柔和 / 偏色三档既能保留色相，又不会糊在背景里
+    readonly property color fgColor: root.hasCover
+        ? root.ensureContrast(root.fgColorRaw, root.backdropColor, 4.5)
+        : root.fgColorRaw
 
     // karaoke 参数（对齐 LyricBar）
     readonly property real unlitOpacity: 0.34
@@ -462,6 +521,7 @@ Widget {
             anchors.bottom: parent.bottom
             height: 4
             value: backend.progress
+            primaryColor: root.barColor
 
             Behavior on value {
                 NumberAnimation { duration: 400; easing.type: Easing.Linear }
