@@ -47,6 +47,36 @@ def _data_dir() -> Path:
         return Path(__file__).resolve().parent
 
 
+def _restore_winrt_native() -> None:
+    """还原打包时被丢弃的 winrt 原生模块（*.pyd）。
+
+    cw-plugin-pack 会排除手工放置的 *.pyd（.dll / .pyi / .py 都保留），而 winrt
+    全靠 _winrt*.pyd 才能工作：少了它 import winrt._winrt 必失败，SMTC 的进度与
+    封面整体失效（表现为「winrt 不可用，进度读取关闭」）。这些 .pyd 以 *.pyd.dll
+    随包分发，这里在导入 winrt 之前按需还原。只补缺失的，可反复执行。
+    """
+    log = globals().get("logger")
+    try:
+        import shutil
+
+        winrt_dir = Path(__file__).resolve().parent / "libs" / "winrt"
+        if not winrt_dir.is_dir():
+            return
+        restored = []
+        for stash in winrt_dir.glob("*.pyd.dll"):
+            target = stash.with_name(stash.name[:-4])       # 去掉结尾的 .dll
+            if not target.exists():
+                shutil.copy2(stash, target)
+                restored.append(target.name)
+        if restored and log is not None:
+            log.info(f"[lyricsisland] 已还原 winrt 原生模块: {' '.join(restored)}")
+    except Exception as e:                                  # noqa: BLE001
+        if log is not None:
+            log.warning(f"[lyricsisland] 还原 winrt 原生模块失败: {e}")
+
+
+_restore_winrt_native()
+
 # smtc_progress 与 main.py 同目录；SDK 一般已把插件目录加入 sys.path，这里兜底
 try:
     from smtc_progress import SmtcProgress
